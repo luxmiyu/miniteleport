@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "miniteleport",
+  "version": "${version}",
+  "name": "MiniTeleport",
+  "description": "Minimal zero-configuration server-side teleport commands.",
+  "authors": ["luxmiyu"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/miniteleport/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.luxmiyu.miniteleport.MiniTeleport"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}

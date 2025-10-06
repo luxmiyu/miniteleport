@@ -1,11 +1,10 @@
 package dev.luxmiyu.miniteleport;
 
 import com.mojang.brigadier.context.CommandContext;
-import net.fabricmc.api.ModInitializer;
-import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.api.ModInitializer;
 
 import net.minecraft.world.GameRules;
 import net.minecraft.util.Formatting;
@@ -77,31 +76,19 @@ public class MiniTeleport implements ModInitializer {
 
     // ------ DATA -----------------------------------------------------------------------------------------------
 
-    Path getConfigDir() {
-        return FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
-    }
-
-    Path getDataDir(MinecraftServer server) {
+    Path getDir(MinecraftServer server) {
         return server.getSavePath(WorldSavePath.ROOT).resolve(MOD_ID);
     }
 
-    File getDataFile(MinecraftServer server, @Nullable UUID uuid) {
-        Path worldDir = getDataDir(server);
+    File getFile(MinecraftServer server, @Nullable UUID uuid) {
+        Path worldDir = getDir(server);
         Path path = (uuid == null) ? worldDir.resolve("warps.json") : worldDir.resolve("homes/" + uuid + ".json");
         return path.toFile();
     }
 
-    void initializeConfig() {
+    void createDir(MinecraftServer server) {
         try {
-            Files.createDirectories(getConfigDir());
-        } catch (IOException e) {
-            LOGGER.error("Failed to create config directory", e);
-        }
-    }
-
-    void initializeData(MinecraftServer server) {
-        try {
-            Files.createDirectories(getDataDir(server).resolve("homes"));
+            Files.createDirectories(getDir(server).resolve("homes"));
         } catch (IOException e) {
             LOGGER.error("Failed to create data directory", e);
         }
@@ -121,7 +108,7 @@ public class MiniTeleport implements ModInitializer {
     }
 
     @Nullable Warp getWarp(MinecraftServer server, String name, @Nullable UUID uuid) {
-        for (Warp warp : getWarps(getDataFile(server, uuid))) {
+        for (Warp warp : getWarps(getFile(server, uuid))) {
             if (warp.name().equals(name)) return warp;
         }
         return null;
@@ -149,7 +136,7 @@ public class MiniTeleport implements ModInitializer {
 
     void setWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
         MinecraftServer server = player.getEntityWorld().getServer();
-        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getDataFile(server, uuid))));
+        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(server, uuid))));
         String dimension = player.getEntityWorld().getRegistryKey().getValue().toString();
         Warp warp = new Warp(name, (int) Math.floor(player.getX()), (int) Math.floor(player.getY()),
             (int) Math.floor(player.getZ()), dimension);
@@ -166,12 +153,12 @@ public class MiniTeleport implements ModInitializer {
             warps.add(warp);
         }
 
-        CompletableFuture.runAsync(() -> writeFile(getDataFile(server, uuid), warps));
+        CompletableFuture.runAsync(() -> writeFile(getFile(server, uuid), warps));
     }
 
     void delWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
         MinecraftServer server = player.getEntityWorld().getServer();
-        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getDataFile(server, uuid))));
+        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(server, uuid))));
 
         int delIndex = -1;
         for (int i = 0; i < warps.size(); i++) {
@@ -188,7 +175,7 @@ public class MiniTeleport implements ModInitializer {
 
         warps.remove(delIndex);
 
-        CompletableFuture.runAsync(() -> writeFile(getDataFile(server, uuid), warps));
+        CompletableFuture.runAsync(() -> writeFile(getFile(server, uuid), warps));
     }
 
     void doTeleportEffect(ServerWorld world, ServerPlayerEntity player) {
@@ -250,7 +237,7 @@ public class MiniTeleport implements ModInitializer {
     }
 
     Text listWarps(MinecraftServer server, @Nullable UUID uuid) {
-        Warp[] warps = getWarps(getDataFile(server, uuid));
+        Warp[] warps = getWarps(getFile(server, uuid));
 
         if (warps.length == 0) {
             return Text.literal(uuid == null ? "There are no warps." : "You have no homes.").formatted(Formatting.RED);
@@ -443,7 +430,7 @@ public class MiniTeleport implements ModInitializer {
 
             if (player) uuid = getPlayer(context.getSource()).getUuid();
 
-            for (Warp warp : getWarps(getDataFile(server, uuid))) {
+            for (Warp warp : getWarps(getFile(server, uuid))) {
                 builder.suggest(warp.name());
             }
             return builder.buildFuture();
@@ -720,8 +707,6 @@ public class MiniTeleport implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        initializeConfig();
-
         CommandRegistrationCallback.EVENT.register(
             (dispatcher, registryAccess, environment) -> registerCommands(dispatcher)
         );
@@ -732,7 +717,7 @@ public class MiniTeleport implements ModInitializer {
             }
         });
 
-        ServerWorldEvents.LOAD.register((server, world) -> initializeData(server));
+        ServerWorldEvents.LOAD.register((server, world) -> createDir(server));
 
         LOGGER.info("Initialized!");
     }

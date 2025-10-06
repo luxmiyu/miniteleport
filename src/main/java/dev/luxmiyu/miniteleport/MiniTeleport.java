@@ -1,23 +1,27 @@
 package dev.luxmiyu.miniteleport;
 
+import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 
 import net.minecraft.world.GameRules;
+import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.WorldSavePath;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.text.Text;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
 import net.minecraft.text.MutableText;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -57,7 +61,6 @@ public class MiniTeleport implements ModInitializer {
     static final String MOD_ID = "miniteleport";
     static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir().resolve("miniteleport");
 
     static final Predicate<ServerCommandSource> PERMISSIONS_NORMAL = source -> source.hasPermissionLevel(0);
     static final Predicate<ServerCommandSource> PERMISSIONS_ADMIN = source -> source.hasPermissionLevel(4);
@@ -72,12 +75,39 @@ public class MiniTeleport implements ModInitializer {
 
     final List<TeleportRequest> pendingRequests = new CopyOnWriteArrayList<>();
 
-    // ------ WARPS ----------------------------------------------------------------------------------------------
+    // ------ DATA -----------------------------------------------------------------------------------------------
 
-    File getFile(@Nullable UUID uuid) {
-        Path path = (uuid == null) ? CONFIG_DIR.resolve("warps.json") : CONFIG_DIR.resolve("homes/" + uuid + ".json");
+    Path getConfigDir() {
+        return FabricLoader.getInstance().getConfigDir().resolve(MOD_ID);
+    }
+
+    Path getDataDir(MinecraftServer server) {
+        return server.getSavePath(WorldSavePath.ROOT).resolve(MOD_ID);
+    }
+
+    File getDataFile(MinecraftServer server, @Nullable UUID uuid) {
+        Path worldDir = getDataDir(server);
+        Path path = (uuid == null) ? worldDir.resolve("warps.json") : worldDir.resolve("homes/" + uuid + ".json");
         return path.toFile();
     }
+
+    void initializeConfig() {
+        try {
+            Files.createDirectories(getConfigDir());
+        } catch (IOException e) {
+            LOGGER.error("Failed to create config directory", e);
+        }
+    }
+
+    void initializeData(MinecraftServer server) {
+        try {
+            Files.createDirectories(getDataDir(server).resolve("homes"));
+        } catch (IOException e) {
+            LOGGER.error("Failed to create data directory", e);
+        }
+    }
+
+    // ------ WARPS ----------------------------------------------------------------------------------------------
 
     Warp[] getWarps(File file) {
         if (!file.exists()) return new Warp[0];
@@ -90,8 +120,8 @@ public class MiniTeleport implements ModInitializer {
         }
     }
 
-    @Nullable Warp getWarp(String name, @Nullable UUID uuid) {
-        for (Warp warp : getWarps(getFile(uuid))) {
+    @Nullable Warp getWarp(MinecraftServer server, String name, @Nullable UUID uuid) {
+        for (Warp warp : getWarps(getDataFile(server, uuid))) {
             if (warp.name().equals(name)) return warp;
         }
         return null;
@@ -118,7 +148,8 @@ public class MiniTeleport implements ModInitializer {
     }
 
     void setWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
-        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(uuid))));
+        MinecraftServer server = player.getEntityWorld().getServer();
+        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getDataFile(server, uuid))));
         String dimension = player.getEntityWorld().getRegistryKey().getValue().toString();
         Warp warp = new Warp(name, (int) Math.floor(player.getX()), (int) Math.floor(player.getY()),
             (int) Math.floor(player.getZ()), dimension);
@@ -135,14 +166,12 @@ public class MiniTeleport implements ModInitializer {
             warps.add(warp);
         }
 
-        CompletableFuture.runAsync(() -> writeFile(getFile(uuid), warps));
+        CompletableFuture.runAsync(() -> writeFile(getDataFile(server, uuid), warps));
     }
 
     void delWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
-        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(uuid))));
-        String dimension = player.getEntityWorld().getRegistryKey().getValue().toString();
-        Warp warp = new Warp(name, (int) Math.floor(player.getX()), (int) Math.floor(player.getY()),
-            (int) Math.floor(player.getZ()), dimension);
+        MinecraftServer server = player.getEntityWorld().getServer();
+        ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getDataFile(server, uuid))));
 
         int delIndex = -1;
         for (int i = 0; i < warps.size(); i++) {
@@ -159,7 +188,7 @@ public class MiniTeleport implements ModInitializer {
 
         warps.remove(delIndex);
 
-        CompletableFuture.runAsync(() -> writeFile(getFile(uuid), warps));
+        CompletableFuture.runAsync(() -> writeFile(getDataFile(server, uuid), warps));
     }
 
     void doTeleportEffect(ServerWorld world, ServerPlayerEntity player) {
@@ -220,8 +249,8 @@ public class MiniTeleport implements ModInitializer {
         return 1;
     }
 
-    Text listWarps(@Nullable UUID uuid) {
-        Warp[] warps = getWarps(getFile(uuid));
+    Text listWarps(MinecraftServer server, @Nullable UUID uuid) {
+        Warp[] warps = getWarps(getDataFile(server, uuid));
 
         if (warps.length == 0) {
             return Text.literal(uuid == null ? "There are no warps." : "You have no homes.").formatted(Formatting.RED);
@@ -394,6 +423,10 @@ public class MiniTeleport implements ModInitializer {
 
     // ------ COMMANDS ----------------------------------------------------------------------------------------
 
+    MinecraftServer getServer(CommandContext<ServerCommandSource> context) {
+        return context.getSource().getServer();
+    }
+
     ServerPlayerEntity getPlayer(ServerCommandSource source) throws CommandSyntaxException {
         ServerPlayerEntity player = source.getPlayer();
         if (player == null) {
@@ -405,11 +438,12 @@ public class MiniTeleport implements ModInitializer {
 
     SuggestionProvider<ServerCommandSource> suggestWarps(boolean player) {
         return (context, builder) -> {
+            MinecraftServer server = getPlayer(context.getSource()).getEntityWorld().getServer();
             UUID uuid = null;
 
             if (player) uuid = getPlayer(context.getSource()).getUuid();
 
-            for (Warp warp : getWarps(getFile(uuid))) {
+            for (Warp warp : getWarps(getDataFile(server, uuid))) {
                 builder.suggest(warp.name());
             }
             return builder.buildFuture();
@@ -486,12 +520,12 @@ public class MiniTeleport implements ModInitializer {
                 .executes(context -> {
                     ServerPlayerEntity player = getPlayer(context.getSource());
                     String homeName = StringArgumentType.getString(context, "name");
-                    return warpPlayer(player, getWarp(homeName, player.getUuid()));
+                    return warpPlayer(player, getWarp(getServer(context), homeName, player.getUuid()));
                 })
             ).executes(context -> {
                 ServerPlayerEntity player = getPlayer(context.getSource());
 
-                return warpPlayer(player, getWarp("home", player.getUuid()));
+                return warpPlayer(player, getWarp(getServer(context), "home", player.getUuid()));
             })
         );
 
@@ -499,7 +533,7 @@ public class MiniTeleport implements ModInitializer {
             .requires(PERMISSIONS_NORMAL)
             .executes(context -> {
                 ServerPlayerEntity player = getPlayer(context.getSource());
-                player.sendMessage(listWarps(player.getUuid()), false);
+                player.sendMessage(listWarps(getServer(context), player.getUuid()), false);
                 return 1;
             })
         );
@@ -508,7 +542,7 @@ public class MiniTeleport implements ModInitializer {
             .requires(PERMISSIONS_NORMAL)
             .executes(context -> {
                 ServerPlayerEntity player = getPlayer(context.getSource());
-                return warpPlayer(player, getWarp("back", player.getUuid()));
+                return warpPlayer(player, getWarp(getServer(context), "back", player.getUuid()));
             })
         );
 
@@ -551,7 +585,7 @@ public class MiniTeleport implements ModInitializer {
                 .executes(context -> {
                     ServerPlayerEntity player = getPlayer(context.getSource());
                     String warpName = StringArgumentType.getString(context, "name");
-                    return warpPlayer(player, getWarp(warpName, null));
+                    return warpPlayer(player, getWarp(getServer(context), warpName, null));
                 })
             )
         );
@@ -560,7 +594,7 @@ public class MiniTeleport implements ModInitializer {
             .requires(PERMISSIONS_NORMAL)
             .executes(context -> {
                 ServerPlayerEntity player = getPlayer(context.getSource());
-                player.sendMessage(listWarps(null), false);
+                player.sendMessage(listWarps(getServer(context), null), false);
                 return 1;
             }));
 
@@ -588,7 +622,7 @@ public class MiniTeleport implements ModInitializer {
             .requires(PERMISSIONS_NORMAL)
             .executes(context -> {
                 ServerPlayerEntity player = getPlayer(context.getSource());
-                return warpPlayer(player, getWarp("spawn", null));
+                return warpPlayer(player, getWarp(getServer(context), "spawn", null));
             })
         );
 
@@ -686,22 +720,19 @@ public class MiniTeleport implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        try {
-            Files.createDirectories(CONFIG_DIR);
-            Files.createDirectories(CONFIG_DIR.resolve("homes"));
-        } catch (IOException e) {
-            LOGGER.error("Failed to create directories", e);
-        }
+        initializeConfig();
 
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-            registerCommands(dispatcher);
-        });
+        CommandRegistrationCallback.EVENT.register(
+            (dispatcher, registryAccess, environment) -> registerCommands(dispatcher)
+        );
 
         ServerLivingEntityEvents.AFTER_DEATH.register((entity, cause) -> {
             if (entity instanceof ServerPlayerEntity player) {
                 setWarp("back", player, player.getUuid());
             }
         });
+
+        ServerWorldEvents.LOAD.register((server, world) -> initializeData(server));
 
         LOGGER.info("Initialized!");
     }

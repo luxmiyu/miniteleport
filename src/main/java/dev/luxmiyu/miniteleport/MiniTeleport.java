@@ -74,7 +74,7 @@ public class MiniTeleport implements ModInitializer {
 
     final List<TeleportRequest> pendingRequests = new CopyOnWriteArrayList<>();
 
-    // ------ DATA -----------------------------------------------------------------------------------------------
+    // ------ WARPS ----------------------------------------------------------------------------------------------
 
     Path getDir(MinecraftServer server) {
         return server.getSavePath(WorldSavePath.ROOT).resolve(MOD_ID);
@@ -93,8 +93,6 @@ public class MiniTeleport implements ModInitializer {
             LOGGER.error("Failed to create data directory", e);
         }
     }
-
-    // ------ WARPS ----------------------------------------------------------------------------------------------
 
     Warp[] getWarps(File file) {
         if (!file.exists()) return new Warp[0];

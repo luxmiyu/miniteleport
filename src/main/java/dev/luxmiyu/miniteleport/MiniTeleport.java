@@ -154,7 +154,7 @@ public class MiniTeleport implements ModInitializer {
         CompletableFuture.runAsync(() -> writeFile(getFile(server, uuid), warps));
     }
 
-    void delWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
+    int delWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
         MinecraftServer server = player.getEntityWorld().getServer();
         ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(server, uuid))));
 
@@ -166,14 +166,21 @@ public class MiniTeleport implements ModInitializer {
             }
         }
 
+        String start = uuid == null ? "Warp '" : "Home '";
+
         if (delIndex == -1) {
-            player.sendMessage(Text.literal("Warp " + name + " does not exist!").formatted(Formatting.RED), false);
-            return;
+            player.sendMessage(
+                Text.literal(start + name + "' does not exist!").formatted(Formatting.RED),
+                false);
+            return 0;
+        } else {
+            warps.remove(delIndex);
+            CompletableFuture.runAsync(() -> writeFile(getFile(server, uuid), warps));
+
+            player.sendMessage(
+                Text.literal(start + name + "' deleted!").formatted(Formatting.AQUA), false);
+            return 1;
         }
-
-        warps.remove(delIndex);
-
-        CompletableFuture.runAsync(() -> writeFile(getFile(server, uuid), warps));
     }
 
     void doTeleportEffect(ServerWorld world, ServerPlayerEntity player) {
@@ -482,19 +489,12 @@ public class MiniTeleport implements ModInitializer {
                     ServerPlayerEntity player = getPlayer(context.getSource());
 
                     String homeName = StringArgumentType.getString(context, "name");
-                    delWarp(homeName, player, player.getUuid());
-
-                    player.sendMessage(
-                        Text.literal(String.format("Home %s deleted!", homeName)).formatted(Formatting.AQUA),
-                        false);
-                    return 1;
+                    return delWarp(homeName, player, player.getUuid());
                 })
             )
             .executes(context -> {
                 ServerPlayerEntity player = getPlayer(context.getSource());
-                delWarp("home", player, player.getUuid());
-                player.sendMessage(Text.literal("Home deleted!").formatted(Formatting.AQUA), false);
-                return 1;
+                return delWarp("home", player, player.getUuid());
             })
         );
 
@@ -553,12 +553,7 @@ public class MiniTeleport implements ModInitializer {
                     ServerPlayerEntity player = getPlayer(context.getSource());
 
                     String warpName = StringArgumentType.getString(context, "name");
-                    delWarp(warpName, player, null);
-
-                    player.sendMessage(
-                        Text.literal(String.format("Warp %s deleted!", warpName)).formatted(Formatting.AQUA),
-                        false);
-                    return 1;
+                    return delWarp(warpName, player, null);
                 })
             )
         );

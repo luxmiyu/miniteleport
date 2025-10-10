@@ -1,10 +1,9 @@
 package dev.luxmiyu.miniteleport;
 
-import com.mojang.brigadier.context.CommandContext;
+import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.api.ModInitializer;
 
 import net.minecraft.world.GameRules;
 import net.minecraft.util.Formatting;
@@ -29,11 +28,11 @@ import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.network.packet.s2c.play.PositionFlag;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,6 +54,7 @@ import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+import org.jetbrains.annotations.Nullable;
 
 public class MiniTeleport implements ModInitializer {
     static final String MOD_ID = "miniteleport";

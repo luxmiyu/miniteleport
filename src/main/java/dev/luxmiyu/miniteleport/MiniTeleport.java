@@ -10,8 +10,8 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -65,10 +65,45 @@ public class MiniTeleport implements ModInitializer {
 
     static final long REQUEST_TIMEOUT_MS = 60_000; // 60 seconds
 
-    record Warp(String name, int x, int y, int z, String dimension) {
+    @SuppressWarnings("ClassCanBeRecord")
+    static final class Warp {
+        private final String name;
+        private final int x, y, z;
+        private final String dimension;
+
+        public Warp(String name, int x, int y, int z, String dimension) {
+            this.name = name;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.dimension = dimension;
+        }
+
+        public String name() { return name; }
+        public int x() { return x; }
+        public int y() { return y; }
+        public int z() { return z; }
+        public String dimension() { return dimension; }
     }
 
-    record TeleportRequest(UUID sender, UUID receiver, boolean here, long expiry) {
+    @SuppressWarnings("ClassCanBeRecord")
+    static final class TeleportRequest {
+        private final UUID sender;
+        private final UUID receiver;
+        private final boolean here;
+        private final long expiry;
+
+        public TeleportRequest(UUID sender, UUID receiver, boolean here, long expiry) {
+            this.sender = sender;
+            this.receiver = receiver;
+            this.here = here;
+            this.expiry = expiry;
+        }
+
+        public UUID sender() { return sender; }
+        public UUID receiver() { return receiver; }
+        public boolean here() { return here; }
+        public long expiry() { return expiry; }
     }
 
     final List<TeleportRequest> pendingRequests = new CopyOnWriteArrayList<>();
@@ -213,7 +248,7 @@ public class MiniTeleport implements ModInitializer {
 
         String[] dimensionSplit = warp.dimension().split(":");
         ServerWorld world = Objects.requireNonNull(player.world.getServer())
-            .getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(dimensionSplit[0], dimensionSplit[1])));
+            .getWorld(RegistryKey.of(Registry.WORLD_KEY, Identifier.of(dimensionSplit[0], dimensionSplit[1])));
         if (world == null) {
             player.sendMessage(Text.literal("That dimension doesn't exist!").formatted(Formatting.RED), false);
             return 0;

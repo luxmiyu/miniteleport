@@ -211,8 +211,9 @@ public class MiniTeleport implements ModInitializer {
             return 0;
         }
 
+        String[] dimensionSplit = warp.dimension().split(":");
         ServerWorld world = player.getServerWorld().getServer()
-            .getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(warp.dimension())));
+            .getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(dimensionSplit[0], dimensionSplit[1])));
         if (world == null) {
             player.sendMessage(Text.literal("That dimension doesn't exist!").formatted(Formatting.RED), false);
             return 0;

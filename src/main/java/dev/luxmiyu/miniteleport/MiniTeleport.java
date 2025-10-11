@@ -24,7 +24,6 @@ import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.network.packet.s2c.play.PositionFlag;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
@@ -48,7 +47,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 import java.util.Objects;
-import java.util.EnumSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.function.Predicate;
@@ -223,8 +221,7 @@ public class MiniTeleport implements ModInitializer {
 
         setWarp("back", player, player.getUuid());
 
-        player.teleport(world, warp.x() + 0.5, warp.y() + 0.1, warp.z() + 0.5, EnumSet.noneOf(PositionFlag.class),
-            player.getYaw(), player.getPitch());
+        player.teleport(world, warp.x() + 0.5, warp.y() + 0.1, warp.z() + 0.5, player.getYaw(), player.getPitch());
 
         doTeleportEffect(world, player);
 

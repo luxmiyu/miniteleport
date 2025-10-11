@@ -9,7 +9,6 @@ import net.minecraft.world.GameRules;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.WorldSavePath;
-import net.minecraft.world.WorldProperties;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.RegistryKey;
@@ -133,9 +132,9 @@ public class MiniTeleport implements ModInitializer {
     }
 
     void setWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
-        MinecraftServer server = player.getEntityWorld().getServer();
+        MinecraftServer server = player.getWorld().getServer();
         ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(server, uuid))));
-        String dimension = player.getEntityWorld().getRegistryKey().getValue().toString();
+        String dimension = player.getWorld().getRegistryKey().getValue().toString();
         Warp warp = new Warp(name, (int) Math.floor(player.getX()), (int) Math.floor(player.getY()),
             (int) Math.floor(player.getZ()), dimension);
 
@@ -155,7 +154,7 @@ public class MiniTeleport implements ModInitializer {
     }
 
     int delWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
-        MinecraftServer server = player.getEntityWorld().getServer();
+        MinecraftServer server = player.getWorld().getServer();
         ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(server, uuid))));
 
         int delIndex = -1;
@@ -212,7 +211,7 @@ public class MiniTeleport implements ModInitializer {
             return 0;
         }
 
-        ServerWorld world = player.getEntityWorld().getServer()
+        ServerWorld world = player.getWorld().getServer()
             .getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(warp.dimension())));
         if (world == null) {
             player.sendMessage(Text.literal("That dimension doesn't exist!").formatted(Formatting.RED), false);
@@ -329,7 +328,7 @@ public class MiniTeleport implements ModInitializer {
 
         for (TeleportRequest request : requests) {
             ServerPlayerEntity receiver =
-                sender.getEntityWorld().getServer().getPlayerManager().getPlayer(request.receiver());
+                sender.getWorld().getServer().getPlayerManager().getPlayer(request.receiver());
 
             if (receiver != null) {
                 receiver.sendMessage(
@@ -363,7 +362,7 @@ public class MiniTeleport implements ModInitializer {
         }
 
         ServerPlayerEntity actualSender =
-            receiver.getEntityWorld().getServer().getPlayerManager().getPlayer(request.sender());
+            receiver.getWorld().getServer().getPlayerManager().getPlayer(request.sender());
         if (actualSender == null) {
             receiver.sendMessage(Text.literal("Request sender is no longer online.").formatted(Formatting.RED), false);
             removeRequest(request);
@@ -373,12 +372,12 @@ public class MiniTeleport implements ModInitializer {
         if (request.here()) {
             warpPlayer(receiver,
                 new Warp(actualSender.getName().getString(), (int) actualSender.getX(), (int) actualSender.getY(),
-                    (int) actualSender.getZ(), actualSender.getEntityWorld().getRegistryKey().getValue().toString()));
+                    (int) actualSender.getZ(), actualSender.getWorld().getRegistryKey().getValue().toString()));
             actualSender.sendMessage(Text.literal("Teleport request accepted!").formatted(Formatting.AQUA), false);
         } else {
             warpPlayer(actualSender,
                 new Warp(receiver.getName().getString(), (int) receiver.getX(), (int) receiver.getY(),
-                    (int) receiver.getZ(), receiver.getEntityWorld().getRegistryKey().getValue().toString()));
+                    (int) receiver.getZ(), receiver.getWorld().getRegistryKey().getValue().toString()));
             receiver.sendMessage(Text.literal("Teleport request accepted!").formatted(Formatting.AQUA), false);
         }
 
@@ -403,7 +402,7 @@ public class MiniTeleport implements ModInitializer {
         }
 
         ServerPlayerEntity actualSender =
-            receiver.getEntityWorld().getServer().getPlayerManager().getPlayer(request.sender());
+            receiver.getWorld().getServer().getPlayerManager().getPlayer(request.sender());
         if (actualSender == null) {
             receiver.sendMessage(Text.literal("Request sender is no longer online.").formatted(Formatting.RED), false);
             removeRequest(request);
@@ -430,7 +429,7 @@ public class MiniTeleport implements ModInitializer {
 
     SuggestionProvider<ServerCommandSource> suggestWarps(boolean player) {
         return (context, builder) -> {
-            MinecraftServer server = getPlayer(context.getSource()).getEntityWorld().getServer();
+            MinecraftServer server = getPlayer(context.getSource()).getWorld().getServer();
             UUID uuid = null;
 
             if (player) uuid = getPlayer(context.getSource()).getUuid();
@@ -446,7 +445,7 @@ public class MiniTeleport implements ModInitializer {
         return (context, builder) -> {
             ServerPlayerEntity sender = getPlayer(context.getSource());
 
-            List<ServerPlayerEntity> players = sender.getEntityWorld().getServer().getPlayerManager().getPlayerList();
+            List<ServerPlayerEntity> players = sender.getWorld().getServer().getPlayerManager().getPlayerList();
 
             for (ServerPlayerEntity player : players) {
                 if (!sender.getUuid().equals(player.getUuid())) {
@@ -584,13 +583,8 @@ public class MiniTeleport implements ModInitializer {
                 ServerPlayerEntity player = getPlayer(context.getSource());
                 setWarp("spawn", player, null);
 
-                ServerWorld world = player.getEntityWorld();
-                world.setSpawnPoint(WorldProperties.SpawnPoint.create(
-                    player.getEntityWorld().getRegistryKey(),
-                    player.getBlockPos(),
-                    0,
-                    0
-                ));
+                ServerWorld world = player.getWorld();
+                world.setSpawnPos(player.getBlockPos(), 0);
                 world.getServer().getGameRules().get(GameRules.SPAWN_RADIUS).set(0, world.getServer());
 
                 player.sendMessage(Text.literal("Spawn set!").formatted(Formatting.AQUA), false);

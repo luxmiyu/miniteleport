@@ -252,8 +252,10 @@ public class MiniTeleport implements ModInitializer {
             text
                 .append(Text.literal(" "))
                 .append(Text.literal(warp.name()).formatted(Formatting.GOLD).styled(style -> style
-                        .withClickEvent(new ClickEvent.RunCommand((uuid == null ? "/warp " : "/home ") + warp.name()))
-                        .withHoverEvent(new HoverEvent.ShowText(Text.literal("Teleport to " + warp.name())))
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, (uuid == null ? "/warp " : 
+                            "/home ") + warp.name()))
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
+                            Text.literal("Teleport to " + warp.name())))
                     )
                 );
         }
@@ -298,15 +300,15 @@ public class MiniTeleport implements ModInitializer {
                 String.format("%s wants to teleport %s. ", sender.getName().getString(), here ? "you to them" : "to you")
             )
             .formatted(Formatting.YELLOW).append(Text.literal("[Accept]").formatted(Formatting.GREEN).styled(
-                style -> style.withClickEvent(new ClickEvent.RunCommand("/tpaccept " + sender.getName().getString()))
-                    .withHoverEvent(new HoverEvent.ShowText(
+                style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpaccept " + sender.getName().getString()))
+                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                         Text.literal("Accept teleport request from " + sender.getName().getString()))))
 
             )
             .append(Text.literal(" "))
             .append(Text.literal("[Deny]").formatted(Formatting.RED).styled(
-                style -> style.withClickEvent(new ClickEvent.RunCommand("/tpdeny " + sender.getName().getString()))
-                    .withHoverEvent(new HoverEvent.ShowText(
+                style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpdeny " + sender.getName().getString()))
+                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                         Text.literal("Deny teleport request from " + sender.getName().getString())))));
 
         receiver.sendMessage(message, false);

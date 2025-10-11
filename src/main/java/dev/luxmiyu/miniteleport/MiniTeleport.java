@@ -221,7 +221,7 @@ public class MiniTeleport implements ModInitializer {
         setWarp("back", player, player.getUuid());
 
         player.teleport(world, warp.x() + 0.5, warp.y() + 0.1, warp.z() + 0.5, EnumSet.noneOf(PositionFlag.class),
-            player.getYaw(), player.getPitch(), true);
+            player.getYaw(), player.getPitch());
 
         doTeleportEffect(world, player);
 

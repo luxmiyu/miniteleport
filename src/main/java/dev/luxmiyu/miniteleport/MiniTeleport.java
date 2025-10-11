@@ -1,8 +1,8 @@
 package dev.luxmiyu.miniteleport;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
-import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 
 import net.minecraft.world.GameRules;
@@ -738,10 +738,9 @@ public class MiniTeleport implements ModInitializer {
             (dispatcher, registryAccess, environment) -> registerCommands(dispatcher)
         );
 
-        ServerLivingEntityEvents.AFTER_DEATH.register((entity, cause) -> {
-            if (entity instanceof ServerPlayerEntity player) {
-                setWarp("back", player, player.getUuid());
-            }
+        ServerPlayerEvents.ALLOW_DEATH.register((player, source, amount) -> {
+            setWarp("back", player, player.getUuid());
+            return true;
         });
 
         ServerWorldEvents.LOAD.register((server, world) -> createDir(server));

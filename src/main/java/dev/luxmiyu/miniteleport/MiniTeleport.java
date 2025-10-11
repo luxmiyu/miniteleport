@@ -47,12 +47,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
+import java.util.Objects;
 import java.util.EnumSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 import org.jetbrains.annotations.Nullable;
 
 public class MiniTeleport implements ModInitializer {
@@ -132,9 +134,9 @@ public class MiniTeleport implements ModInitializer {
     }
 
     void setWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
-        MinecraftServer server = player.getServerWorld().getServer();
+        MinecraftServer server = player.world.getServer();
         ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(server, uuid))));
-        String dimension = player.getServerWorld().getRegistryKey().getValue().toString();
+        String dimension = player.world.getRegistryKey().getValue().toString();
         Warp warp = new Warp(name, (int) Math.floor(player.getX()), (int) Math.floor(player.getY()),
             (int) Math.floor(player.getZ()), dimension);
 
@@ -154,7 +156,7 @@ public class MiniTeleport implements ModInitializer {
     }
 
     int delWarp(String name, ServerPlayerEntity player, @Nullable UUID uuid) {
-        MinecraftServer server = player.getServerWorld().getServer();
+        MinecraftServer server = player.world.getServer();
         ArrayList<Warp> warps = new ArrayList<>(List.of(getWarps(getFile(server, uuid))));
 
         int delIndex = -1;
@@ -212,7 +214,7 @@ public class MiniTeleport implements ModInitializer {
         }
 
         String[] dimensionSplit = warp.dimension().split(":");
-        ServerWorld world = player.getServerWorld().getServer()
+        ServerWorld world = Objects.requireNonNull(player.world.getServer())
             .getWorld(RegistryKey.of(RegistryKeys.WORLD, Identifier.of(dimensionSplit[0], dimensionSplit[1])));
         if (world == null) {
             player.sendMessage(Text.literal("That dimension doesn't exist!").formatted(Formatting.RED), false);
@@ -253,9 +255,9 @@ public class MiniTeleport implements ModInitializer {
             text
                 .append(Text.literal(" "))
                 .append(Text.literal(warp.name()).formatted(Formatting.GOLD).styled(style -> style
-                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, (uuid == null ? "/warp " : 
+                        .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, (uuid == null ? "/warp " :
                             "/home ") + warp.name()))
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
+                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                             Text.literal("Teleport to " + warp.name())))
                     )
                 );
@@ -301,14 +303,16 @@ public class MiniTeleport implements ModInitializer {
                 String.format("%s wants to teleport %s. ", sender.getName().getString(), here ? "you to them" : "to you")
             )
             .formatted(Formatting.YELLOW).append(Text.literal("[Accept]").formatted(Formatting.GREEN).styled(
-                style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpaccept " + sender.getName().getString()))
+                style -> style.withClickEvent(
+                        new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpaccept " + sender.getName().getString()))
                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                         Text.literal("Accept teleport request from " + sender.getName().getString()))))
 
             )
             .append(Text.literal(" "))
             .append(Text.literal("[Deny]").formatted(Formatting.RED).styled(
-                style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpdeny " + sender.getName().getString()))
+                style -> style.withClickEvent(
+                        new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tpdeny " + sender.getName().getString()))
                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
                         Text.literal("Deny teleport request from " + sender.getName().getString())))));
 
@@ -331,7 +335,7 @@ public class MiniTeleport implements ModInitializer {
 
         for (TeleportRequest request : requests) {
             ServerPlayerEntity receiver =
-                sender.getServerWorld().getServer().getPlayerManager().getPlayer(request.receiver());
+                Objects.requireNonNull(sender.world.getServer()).getPlayerManager().getPlayer(request.receiver());
 
             if (receiver != null) {
                 receiver.sendMessage(
@@ -365,7 +369,7 @@ public class MiniTeleport implements ModInitializer {
         }
 
         ServerPlayerEntity actualSender =
-            receiver.getServerWorld().getServer().getPlayerManager().getPlayer(request.sender());
+            Objects.requireNonNull(receiver.world.getServer()).getPlayerManager().getPlayer(request.sender());
         if (actualSender == null) {
             receiver.sendMessage(Text.literal("Request sender is no longer online.").formatted(Formatting.RED), false);
             removeRequest(request);
@@ -375,12 +379,12 @@ public class MiniTeleport implements ModInitializer {
         if (request.here()) {
             warpPlayer(receiver,
                 new Warp(actualSender.getName().getString(), (int) actualSender.getX(), (int) actualSender.getY(),
-                    (int) actualSender.getZ(), actualSender.getServerWorld().getRegistryKey().getValue().toString()));
+                    (int) actualSender.getZ(), actualSender.world.getRegistryKey().getValue().toString()));
             actualSender.sendMessage(Text.literal("Teleport request accepted!").formatted(Formatting.AQUA), false);
         } else {
             warpPlayer(actualSender,
                 new Warp(receiver.getName().getString(), (int) receiver.getX(), (int) receiver.getY(),
-                    (int) receiver.getZ(), receiver.getServerWorld().getRegistryKey().getValue().toString()));
+                    (int) receiver.getZ(), receiver.world.getRegistryKey().getValue().toString()));
             receiver.sendMessage(Text.literal("Teleport request accepted!").formatted(Formatting.AQUA), false);
         }
 
@@ -405,7 +409,7 @@ public class MiniTeleport implements ModInitializer {
         }
 
         ServerPlayerEntity actualSender =
-            receiver.getServerWorld().getServer().getPlayerManager().getPlayer(request.sender());
+            Objects.requireNonNull(receiver.world.getServer()).getPlayerManager().getPlayer(request.sender());
         if (actualSender == null) {
             receiver.sendMessage(Text.literal("Request sender is no longer online.").formatted(Formatting.RED), false);
             removeRequest(request);
@@ -432,7 +436,7 @@ public class MiniTeleport implements ModInitializer {
 
     SuggestionProvider<ServerCommandSource> suggestWarps(boolean player) {
         return (context, builder) -> {
-            MinecraftServer server = getPlayer(context.getSource()).getServerWorld().getServer();
+            MinecraftServer server = getPlayer(context.getSource()).world.getServer();
             UUID uuid = null;
 
             if (player) uuid = getPlayer(context.getSource()).getUuid();
@@ -448,7 +452,8 @@ public class MiniTeleport implements ModInitializer {
         return (context, builder) -> {
             ServerPlayerEntity sender = getPlayer(context.getSource());
 
-            List<ServerPlayerEntity> players = sender.getServerWorld().getServer().getPlayerManager().getPlayerList();
+            List<ServerPlayerEntity> players =
+                Objects.requireNonNull(sender.world.getServer()).getPlayerManager().getPlayerList();
 
             for (ServerPlayerEntity player : players) {
                 if (!sender.getUuid().equals(player.getUuid())) {
@@ -586,7 +591,7 @@ public class MiniTeleport implements ModInitializer {
                 ServerPlayerEntity player = getPlayer(context.getSource());
                 setWarp("spawn", player, null);
 
-                ServerWorld world = player.getServerWorld();
+                ServerWorld world = player.getWorld();
                 world.setSpawnPos(player.getBlockPos(), 0);
                 world.getServer().getGameRules().get(GameRules.SPAWN_RADIUS).set(0, world.getServer());
 

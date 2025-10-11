@@ -5,6 +5,8 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 
+import net.minecraft.command.permission.Permission;
+import net.minecraft.command.permission.PermissionLevel;
 import net.minecraft.world.GameRules;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
@@ -61,8 +63,10 @@ public class MiniTeleport implements ModInitializer {
     static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    static final Predicate<ServerCommandSource> PERMISSIONS_NORMAL = source -> source.hasPermissionLevel(0);
-    static final Predicate<ServerCommandSource> PERMISSIONS_ADMIN = source -> source.hasPermissionLevel(4);
+    static final Predicate<ServerCommandSource> PERMISSIONS_NORMAL =
+        source -> source.getPermissions().hasPermission(new Permission.Level(PermissionLevel.ALL));
+    static final Predicate<ServerCommandSource> PERMISSIONS_ADMIN =
+        source -> source.getPermissions().hasPermission(new Permission.Level(PermissionLevel.OWNERS));
 
     static final long REQUEST_TIMEOUT_MS = 60_000; // 60 seconds
 
@@ -591,7 +595,7 @@ public class MiniTeleport implements ModInitializer {
                     0,
                     0
                 ));
-                world.getServer().getGameRules().get(GameRules.SPAWN_RADIUS).set(0, world.getServer());
+                world.getGameRules().get(GameRules.SPAWN_RADIUS).set(0, world.getServer());
 
                 player.sendMessage(Text.literal("Spawn set!").formatted(Formatting.AQUA), false);
                 return 1;

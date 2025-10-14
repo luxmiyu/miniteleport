@@ -10,17 +10,6 @@ base {
     archivesName = project.archives_base_name
 }
 
-loom {
-    splitEnvironmentSourceSets()
-
-    mods {
-        "miniteleport" {
-            sourceSet sourceSets.main
-            sourceSet sourceSets.client
-        }
-    }
-}
-
 
 repositories {
     // Add repositories to retrieve artifacts from in here.

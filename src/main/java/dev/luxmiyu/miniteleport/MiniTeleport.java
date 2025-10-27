@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.EnumSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.function.Predicate;
 import java.util.concurrent.CompletableFuture;
@@ -243,6 +244,7 @@ public class MiniTeleport implements ModInitializer {
 
     Text listWarps(MinecraftServer server, @Nullable UUID uuid) {
         Warp[] warps = getWarps(getFile(server, uuid));
+        Arrays.sort(warps, Comparator.comparing(Warp::name));
 
         if (warps.length == 0) {
             return Text.literal(uuid == null ? "There are no warps." : "You have no homes.").formatted(Formatting.RED);
